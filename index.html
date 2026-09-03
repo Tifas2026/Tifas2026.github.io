@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Abnahme vor Ort</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0B5563">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Abnahme">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --ground:#EFF3F6; --surface:#FFFFFF; --surface-2:#E3EAEF; --line:#C7D3DB;
+  --ink:#132029; --ink-2:#476170; --ink-3:#7A93A1;
+  --accent:#0B5563; --accent-soft:#DCEAEE;
+  --signal:#F2B300; --signal-ink:#241A00; --signal-edge:#C99400;
+  --alert:#A8331D;
+  --r:10px;
+  --shadow:0 1px 2px rgba(19,32,41,.08), 0 8px 24px -12px rgba(19,32,41,.25);
+  --ui:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#0D1418; --surface:#151E24; --surface-2:#1D272E; --line:#2B3941;
+    --ink:#E7EEF2; --ink-2:#A1B5C0; --ink-3:#6E8693;
+    --accent:#58C2D6; --accent-soft:#16323A;
+    --signal:#F2B300; --signal-ink:#241A00; --signal-edge:#8A6A0A;
+    --alert:#E07A62;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{
+  background:var(--ground); color:var(--ink);
+  font:16px/1.45 var(--ui); -webkit-text-size-adjust:100%;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.wrap{max-width:640px; margin:0 auto; padding:0 14px 140px}
+.lbl{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3)}
+.mono{font-variant-numeric:tabular-nums}
+
+header{position:sticky; top:0; z-index:20; background:var(--ground); border-bottom:1px solid var(--line); padding:12px 0 10px}
+.hgrid{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+h1{margin:0; font-size:17px; font-weight:700; letter-spacing:-.01em}
+.count{margin-left:auto; font-size:13px; color:var(--ink-2)}
+.count b{color:var(--ink); font-weight:700}
+.metaline{margin-top:6px; font-size:13.5px; color:var(--ink-2); display:flex; gap:6px; align-items:center}
+.metaline button{background:none; border:0; padding:4px 0; color:var(--accent); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px}
+
+#meta{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:12px; margin-top:12px; display:grid; gap:10px; grid-template-columns:1fr 1fr}
+#meta .full{grid-column:1/-1}
+label.field{display:flex; flex-direction:column; gap:4px}
+input[type="text"], input[type="date"], textarea{
+  font:15.5px/1.35 var(--ui); color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; padding:9px 10px; width:100%;
+}
+textarea{resize:vertical}
+input:focus-visible, textarea:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+
+#list{display:flex; flex-direction:column; gap:10px; margin-top:14px}
+.pos{display:grid; grid-template-columns:34px 1fr; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow)}
+.pos .rail{background:var(--surface-2); border-right:1px solid var(--line); display:flex; justify-content:center; padding-top:10px}
+.pos .num{font-size:15px; font-weight:600; color:var(--ink-2)}
+.pos .body{padding:10px 12px 11px; min-width:0}
+.pos .txt{font-size:15px; white-space:pre-wrap; overflow-wrap:anywhere}
+.pos .txt.empty{color:var(--ink-3); font-style:italic}
+.pos .thumbs{display:flex; gap:6px; margin-top:9px}
+.pos .thumbs img{width:56px; height:42px; object-fit:cover; border-radius:5px; border:1px solid var(--line); background:var(--surface-2)}
+.pos .foot{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap}
+.trade{font-size:12px; font-weight:600; background:var(--accent-soft); color:var(--accent); border-radius:999px; padding:3px 9px}
+.trade.none{background:transparent; color:var(--ink-3); border:1px dashed var(--line)}
+.nophoto{font-size:12px; color:var(--alert); font-weight:600}
+.pos .acts{margin-left:auto; display:flex; gap:2px}
+.icon{border:0; background:none; color:var(--ink-3); padding:7px 8px; border-radius:7px; font:600 12.5px/1 var(--ui); cursor:pointer}
+.icon:hover{background:var(--surface-2); color:var(--ink)}
+.icon.del:hover{color:var(--alert)}
+.empty-state{margin-top:16px; padding:26px 18px; text-align:center; color:var(--ink-2); border:1px dashed var(--line); border-radius:var(--r); font-size:14.5px}
+.hintbar{display:flex; gap:10px; align-items:center; margin-top:12px; padding:9px 12px; background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--signal); border-radius:7px; font-size:13px; color:var(--ink-2)}
+.hintbar button{margin-left:auto; background:none; border:0; color:var(--accent); font:600 13px var(--ui); cursor:pointer; text-decoration:underline; text-underline-offset:3px; white-space:nowrap}
+
+.bar{position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--ground); border-top:1px solid var(--line); padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.bar .inner{max-width:640px; margin:0 auto; display:flex; gap:8px}
+.btn{border:1px solid transparent; border-radius:9px; font:600 15.5px var(--ui); padding:14px 16px; cursor:pointer; min-height:50px; display:flex; align-items:center; justify-content:center; gap:8px}
+.btn.primary{background:var(--signal); color:var(--signal-ink); border-color:var(--signal-edge); flex:1}
+.btn.ghost{background:var(--surface); color:var(--ink); border-color:var(--line)}
+.btn.quiet{background:none; border-color:var(--line); color:var(--ink-2); min-height:42px; padding:9px 13px; font-size:13.5px}
+.btn[disabled]{opacity:.5; cursor:default}
+.tools{display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; align-items:center}
+
+#sheet{position:fixed; inset:0; z-index:50; background:var(--ground); display:flex; flex-direction:column}
+.sheet-head{display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); background:var(--surface)}
+.sheet-head h2{margin:0; font-size:16px; font-weight:700}
+.sheet-head .x{margin-left:auto; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:8px; width:38px; height:38px; font-size:17px; cursor:pointer}
+.sheet-scroll{flex:1; overflow-y:auto; padding:14px; max-width:640px; margin:0 auto; width:100%}
+.sheet-foot{border-top:1px solid var(--line); background:var(--surface); padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.sheet-foot .inner{max-width:640px; margin:0 auto; display:flex; gap:8px}
+.block{margin-bottom:16px}
+.block > .lbl{display:block; margin-bottom:7px}
+#desc{min-height:104px; font-size:16.5px}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips.row{flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch}
+.chips.row .chip{flex:0 0 auto}
+.chip{border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:999px; padding:8px 12px; font:500 13.5px var(--ui); cursor:pointer; min-height:38px}
+.chip.on{background:var(--accent); border-color:var(--accent); color:var(--surface)}
+.slots{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.slot{position:relative; aspect-ratio:4/3; border:1px dashed var(--line); border-radius:8px; background:var(--surface); display:flex; align-items:center; justify-content:center; color:var(--ink-3); font-size:12.5px; overflow:hidden}
+.slot img{width:100%; height:100%; object-fit:cover}
+.slot .rm{position:absolute; top:4px; right:4px; width:28px; height:28px; border-radius:50%; border:0; background:rgba(10,16,20,.72); color:#fff; font-size:14px; cursor:pointer}
+.photo-btns{display:flex; gap:8px; margin-top:8px}
+.photo-btns .btn{flex:1; min-height:46px; font-size:14.5px}
+.hint{font-size:12.5px; color:var(--ink-3); margin-top:7px}
+
+#pdfPanel{position:fixed; inset:0; z-index:60; background:rgba(8,14,18,.55); display:flex; align-items:flex-end; justify-content:center}
+#pdfPanel .card{background:var(--surface); border-top-left-radius:14px; border-top-right-radius:14px; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); width:100%; max-width:640px}
+#pdfPanel h2{margin:0 0 6px; font-size:17px}
+#pdfPanel p{margin:0 0 14px; font-size:13.5px; color:var(--ink-2)}
+#pdfPanel .row{display:flex; gap:8px; flex-wrap:wrap}
+#pdfPanel .row .btn{flex:1 1 44%}
+
+.toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%); background:var(--ink); color:var(--ground); padding:11px 16px; border-radius:999px; font-size:14px; font-weight:500; z-index:70; box-shadow:var(--shadow); max-width:88vw; text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="padding-bottom:0">
+    <div class="hgrid">
+      <h1>Abnahme vor Ort</h1>
+      <span class="count"><b id="cPos">0</b> Positionen · <b id="cFoto">0</b> Fotos</span>
+    </div>
+    <div class="metaline">
+      <span id="metaSummary">Kopfdaten noch nicht erfasst</span>
+      <button id="toggleMeta" type="button">bearbeiten</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="meta" hidden>
+    <label class="field full"><span class="lbl">Objekt / Projekt</span><input type="text" id="m_objekt" autocomplete="off"></label>
+    <label class="field"><span class="lbl">Einheit / Wohnung</span><input type="text" id="m_einheit" autocomplete="off"></label>
+    <label class="field"><span class="lbl">Datum</span><input type="date" id="m_datum"></label>
+    <label class="field"><span class="lbl">Abnahme durch</span><input type="text" id="m_abnahme" autocomplete="off"></label>
+    <label class="field"><span class="lbl">Anwesend / Übergeber</span><input type="text" id="m_anwesend" autocomplete="off"></label>
+  </div>
+
+  <div id="installHint" class="hintbar" hidden>
+    <span id="installText">Zum Homescreen hinzufügen – dann startet die Erfassung wie eine App.</span>
+    <button id="installDismiss" type="button">verstanden</button>
+  </div>
+
+  <div id="list"></div>
+  <div id="emptyState" class="empty-state" hidden>
+    Noch keine Position erfasst.<br>Mit „Mangel erfassen“ beginnen – Text, Handwerker, bis zu 3 Fotos.
+  </div>
+
+  <div class="tools">
+    <button class="btn quiet" id="newProtocol" type="button">Neue Abnahme beginnen</button>
+    <span id="confirmNew" hidden style="display:flex; gap:8px; align-items:center; font-size:13.5px; color:var(--ink-2)">
+      Alle Positionen löschen?
+      <button class="btn quiet" id="confirmNewYes" type="button" style="color:var(--alert)">Ja, löschen</button>
+      <button class="btn quiet" id="confirmNewNo" type="button">Abbrechen</button>
+    </span>
+    <button class="btn quiet" id="backup" type="button">Sicherung speichern</button>
+    <button class="btn quiet" id="restore" type="button">Sicherung laden</button>
+    <input type="file" id="restoreFile" accept="application/json,.json" hidden>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="inner">
+    <button class="btn primary" id="add" type="button">+ Mangel erfassen</button>
+    <button class="btn ghost" id="pdf" type="button">PDF</button>
+  </div>
+</div>
+
+<div id="sheet" hidden>
+  <div class="sheet-head">
+    <h2 id="sheetTitle">Position 1</h2>
+    <button class="x" id="sheetClose" type="button" aria-label="Schließen">✕</button>
+  </div>
+  <div class="sheet-scroll">
+    <div class="block">
+      <span class="lbl">Raum – antippen, wird vorangestellt · seitlich wischen</span>
+      <div class="chips row" id="roomChips"></div>
+    </div>
+    <div class="block">
+      <span class="lbl">Mangel / Restarbeit</span>
+      <textarea id="desc" rows="4" placeholder="z. B. Silikonfuge Duschtasse nachziehen"></textarea>
+      <div class="chips row" style="margin-top:8px" id="phraseChips"></div>
+    </div>
+    <div class="block">
+      <span class="lbl">Zuständiger Handwerker</span>
+      <div class="chips" id="tradeChips"></div>
+      <input type="text" id="tradeFree" placeholder="oder Firma / Name eintippen" autocomplete="off" style="margin-top:8px">
+    </div>
+    <div class="block">
+      <span class="lbl">Fotos – bis zu 3</span>
+      <div class="slots" id="slots"></div>
+      <div class="photo-btns">
+        <button class="btn ghost" id="btnCam" type="button">Kamera</button>
+        <button class="btn ghost" id="btnLib" type="button">Galerie</button>
+      </div>
+      <p class="hint">Fotos werden auf ca. 1400 px verkleinert – das PDF bleibt handlich.</p>
+      <input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+      <input type="file" id="fileLib" accept="image/*" multiple hidden>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <div class="inner">
+      <button class="btn ghost" id="saveClose" type="button">Speichern</button>
+      <button class="btn primary" id="saveNext" type="button">Speichern &amp; nächste</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdfPanel" hidden>
+  <div class="card">
+    <h2>PDF ist fertig</h2>
+    <p id="pdfInfo">—</p>
+    <div class="row">
+      <button class="btn primary" id="pdfShare" type="button" hidden>Teilen / Speichern</button>
+      <button class="btn ghost" id="pdfSave" type="button">Herunterladen</button>
+      <button class="btn ghost" id="pdfOpen" type="button">Öffnen</button>
+      <button class="btn quiet" id="pdfClose" type="button">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<script src="jspdf.umd.min.js"></script>
+<script>
+"use strict";
+const ROOMS = ["Küche","Bad","WC","Schlafzimmer","Kind","Wohnzimmer","Flur","Balkon","Terrasse","Keller","Garage","Treppenhaus","Allgemein"];
+const PHRASES = ["Silikonfuge nachziehen","Farbe nachbessern","Kratzer","Delle","Fliese gesprungen","Fuge fehlt","Tür schleift","Beschlag einstellen","Sockelleiste fehlt","Steckdose fehlt","Lampe anschließen","Heizkörper lose","Rollladen klemmt","Abfluss undicht","Anschlussfuge offen","Reinigung erforderlich"];
+const TRADES = ["Maler","Elektriker","Hydrauliker","Fliesenleger","Tischler","Bodenleger","Trockenbau","Spengler","Fenster/Türen","Reinigung","Bauleitung"];
+
+let state = {meta:{objekt:"",einheit:"",datum:"",abnahme:"",anwesend:""}, items:[]};
+let editing = null, draft = null, lastPdf = null;
+
+/* ---------- Speicher: IndexedDB, geräteintern ---------- */
+const DB_NAME = "abnahme", STORE = "state";
+function idb(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded = ()=> r.result.createObjectStore(STORE);
+    r.onsuccess = ()=> res(r.result);
+    r.onerror = ()=> rej(r.error);
+  });
+}
+async function load(){
+  try{
+    const db = await idb();
+    return await new Promise((res,rej)=>{
+      const rq = db.transaction(STORE,"readonly").objectStore(STORE).get("current");
+      rq.onsuccess = ()=> res(rq.result || null);
+      rq.onerror = ()=> rej(rq.error);
+    });
+  }catch(e){ return null; }
+}
+let saveTimer = null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    try{
+      const db = await idb();
+      db.transaction(STORE,"readwrite").objectStore(STORE).put(state,"current");
+    }catch(e){ toast("Speichern im Gerät nicht möglich – PDF vor dem Schließen erzeugen", 4500); }
+  }, 350);
+}
+
+/* ---------- Hilfen ---------- */
+const $ = id => document.getElementById(id);
+function toast(msg, ms=2200){
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), ms);
+}
+function deFmt(iso){
+  if(!iso) return "";
+  const p = iso.split("-");
+  return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
+}
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 30000);
+}
+
+/* ---------- Bilder ---------- */
+async function shrink(file, max=1400, q=0.72){
+  let bmp;
+  try{ bmp = await createImageBitmap(file, {imageOrientation:"from-image"}); }
+  catch(e){
+    bmp = await new Promise((res,rej)=>{
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("Bild")); };
+      img.src = url;
+    });
+  }
+  const iw = bmp.width, ih = bmp.height;
+  const s = Math.min(1, max/Math.max(iw,ih));
+  const w = Math.round(iw*s), h = Math.round(ih*s);
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  cv.getContext("2d").drawImage(bmp,0,0,w,h);
+  return {data: cv.toDataURL("image/jpeg", q), w, h};
+}
+
+/* ---------- Rendern ---------- */
+function metaSummary(){
+  const m = state.meta;
+  const bits = [m.objekt, m.einheit, deFmt(m.datum)].filter(Boolean);
+  return bits.length ? bits.join(" · ") : "Kopfdaten noch nicht erfasst";
+}
+function render(){
+  $("metaSummary").textContent = metaSummary();
+  $("cPos").textContent = state.items.length;
+  $("cFoto").textContent = state.items.reduce((n,i)=> n + i.photos.length, 0);
+  $("emptyState").hidden = state.items.length > 0;
+  $("pdf").disabled = state.items.length === 0;
+
+  const list = $("list");
+  list.textContent = "";
+  state.items.forEach((it, idx)=>{
+    const el = document.createElement("article");
+    el.className = "pos";
+    const rail = document.createElement("div");
+    rail.className = "rail";
+    const num = document.createElement("span");
+    num.className = "num mono";
+    num.textContent = String(idx+1).padStart(2,"0");
+    rail.appendChild(num);
+
+    const body = document.createElement("div");
+    body.className = "body";
+    const txt = document.createElement("div");
+    txt.className = "txt" + (it.text ? "" : " empty");
+    txt.textContent = it.text || "ohne Beschreibung";
+    body.appendChild(txt);
+
+    if(it.photos.length){
+      const th = document.createElement("div");
+      th.className = "thumbs";
+      it.photos.forEach(p=>{
+        const im = document.createElement("img");
+        im.src = p.data; im.alt = "";
+        th.appendChild(im);
+      });
+      body.appendChild(th);
+    }
+
+    const foot = document.createElement("div");
+    foot.className = "foot";
+    const tr = document.createElement("span");
+    tr.className = "trade" + (it.trade ? "" : " none");
+    tr.textContent = it.trade || "kein Handwerker";
+    foot.appendChild(tr);
+    if(!it.photos.length){
+      const np = document.createElement("span");
+      np.className = "nophoto"; np.textContent = "kein Foto";
+      foot.appendChild(np);
+    }
+    const acts = document.createElement("div");
+    acts.className = "acts";
+    const eb = document.createElement("button");
+    eb.className = "icon"; eb.type = "button"; eb.textContent = "Bearbeiten";
+    eb.addEventListener("click", ()=> openSheet(idx));
+    const dl = document.createElement("button");
+    dl.className = "icon del"; dl.type = "button"; dl.textContent = "Löschen";
+    dl.addEventListener("click", ()=>{ state.items.splice(idx,1); save(); render(); });
+    acts.append(eb, dl);
+    foot.appendChild(acts);
+    body.appendChild(foot);
+
+    el.append(rail, body);
+    list.appendChild(el);
+  });
+}
+
+/* ---------- Kopfdaten ---------- */
+const metaMap = {objekt:"m_objekt", einheit:"m_einheit", datum:"m_datum", abnahme:"m_abnahme", anwesend:"m_anwesend"};
+function bindMeta(){
+  for(const k in metaMap){
+    const el = $(metaMap[k]);
+    el.value = state.meta[k] || "";
+    el.oninput = ()=>{ state.meta[k] = el.value; $("metaSummary").textContent = metaSummary(); save(); };
+  }
+}
+$("toggleMeta").addEventListener("click", ()=>{
+  const m = $("meta");
+  m.hidden = !m.hidden;
+  $("toggleMeta").textContent = m.hidden ? "bearbeiten" : "fertig";
+  if(!m.hidden) $("m_objekt").focus();
+});
+
+/* ---------- Erfassung ---------- */
+function chipRow(host, values, onPick){
+  host.textContent = "";
+  values.forEach(v=>{
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.textContent = v; b.dataset.val = v;
+    b.addEventListener("click", ()=> onPick(v, b));
+    host.appendChild(b);
+  });
+}
+function markTrade(){
+  $("tradeChips").querySelectorAll(".chip").forEach(c=> c.classList.toggle("on", c.dataset.val === draft.trade));
+}
+function renderSlots(){
+  const host = $("slots");
+  host.textContent = "";
+  for(let i=0;i<3;i++){
+    const s = document.createElement("div");
+    s.className = "slot";
+    const p = draft.photos[i];
+    if(p){
+      const im = document.createElement("img"); im.src = p.data; im.alt = "";
+      const rm = document.createElement("button");
+      rm.className = "rm"; rm.type = "button"; rm.textContent = "✕";
+      rm.setAttribute("aria-label","Foto entfernen");
+      rm.addEventListener("click", ()=>{ draft.photos.splice(i,1); renderSlots(); });
+      s.append(im, rm);
+    }else{
+      s.textContent = i === draft.photos.length ? "nächstes Foto" : "leer";
+    }
+    host.appendChild(s);
+  }
+  const full = draft.photos.length >= 3;
+  $("btnCam").disabled = full; $("btnLib").disabled = full;
+}
+function openSheet(idx){
+  editing = idx;
+  const src = idx === null ? {text:"", trade:"", photos:[]} : state.items[idx];
+  draft = {text: src.text, trade: src.trade, photos: src.photos.slice()};
+  $("sheetTitle").textContent = "Position " + ((idx === null ? state.items.length : idx) + 1);
+  $("desc").value = draft.text;
+  $("tradeFree").value = TRADES.indexOf(draft.trade) === -1 ? draft.trade : "";
+  markTrade(); renderSlots();
+  $("sheet").hidden = false;
+  document.body.style.overflow = "hidden";
+  setTimeout(()=> $("desc").focus(), 60);
+}
+function closeSheet(){
+  $("sheet").hidden = true;
+  document.body.style.overflow = "";
+  editing = null; draft = null;
+}
+function commit(){
+  draft.text = $("desc").value.trim();
+  const free = $("tradeFree").value.trim();
+  if(free) draft.trade = free;
+  if(!draft.text && !draft.photos.length) return false;
+  const item = {text:draft.text, trade:draft.trade, photos:draft.photos};
+  if(editing === null) state.items.push(item); else state.items[editing] = item;
+  save(); render();
+  return true;
+}
+$("add").addEventListener("click", ()=> openSheet(null));
+$("sheetClose").addEventListener("click", closeSheet);
+$("saveClose").addEventListener("click", ()=>{
+  if(commit()) closeSheet(); else toast("Nichts zu speichern – Text oder Foto fehlt");
+});
+$("saveNext").addEventListener("click", ()=>{
+  if(commit()){
+    const n = state.items.length;
+    closeSheet(); openSheet(null);
+    toast("Position " + n + " gespeichert");
+  }else toast("Nichts zu speichern – Text oder Foto fehlt");
+});
+$("desc").addEventListener("input", ()=>{ draft.text = $("desc").value; });
+
+chipRow($("roomChips"), ROOMS, v=>{
+  const ta = $("desc");
+  const stripped = ta.value.trimStart().replace(/^[^–\n]{0,20}–\s*/, "");
+  ta.value = v + " – " + stripped;
+  draft.text = ta.value; ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+});
+chipRow($("phraseChips"), PHRASES, v=>{
+  const ta = $("desc");
+  const cur = ta.value.trim();
+  ta.value = cur ? (/[–:,;]\s*$/.test(cur) ? cur + " " + v : cur + ", " + v) : v;
+  draft.text = ta.value; ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+});
+chipRow($("tradeChips"), TRADES, v=>{
+  draft.trade = draft.trade === v ? "" : v;
+  $("tradeFree").value = "";
+  markTrade();
+});
+$("tradeFree").addEventListener("input", ()=>{
+  const v = $("tradeFree").value.trim();
+  if(v){ draft.trade = v; markTrade(); }
+});
+$("btnCam").addEventListener("click", ()=> $("fileCam").click());
+$("btnLib").addEventListener("click", ()=> $("fileLib").click());
+async function addFiles(files){
+  for(const f of files){
+    if(draft.photos.length >= 3){ toast("Maximal 3 Fotos pro Position"); break; }
+    try{ draft.photos.push(await shrink(f)); renderSlots(); }
+    catch(e){ toast("Ein Bild konnte nicht gelesen werden"); }
+  }
+}
+$("fileCam").addEventListener("change", async e=>{ await addFiles(e.target.files); e.target.value=""; });
+$("fileLib").addEventListener("change", async e=>{ await addFiles(e.target.files); e.target.value=""; });
+
+/* ---------- Abnahme verwalten ---------- */
+$("newProtocol").addEventListener("click", ()=>{ $("confirmNew").hidden=false; $("newProtocol").hidden=true; });
+$("confirmNewNo").addEventListener("click", ()=>{ $("confirmNew").hidden=true; $("newProtocol").hidden=false; });
+$("confirmNewYes").addEventListener("click", ()=>{
+  state = {meta:{objekt:"",einheit:"",datum:new Date().toISOString().slice(0,10),abnahme:"",anwesend:""}, items:[]};
+  bindMeta(); save(); render();
+  $("confirmNew").hidden=true; $("newProtocol").hidden=false;
+  toast("Neue Abnahme angelegt");
+});
+$("backup").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state)], {type:"application/json"});
+  downloadBlob(blob, "abnahme-sicherung-" + new Date().toISOString().slice(0,10) + ".json");
+});
+$("restore").addEventListener("click", ()=> $("restoreFile").click());
+$("restoreFile").addEventListener("change", async e=>{
+  const f = e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  try{
+    const obj = JSON.parse(await f.text());
+    if(!obj || !Array.isArray(obj.items)) throw new Error("Format");
+    state = {meta: Object.assign({objekt:"",einheit:"",datum:"",abnahme:"",anwesend:""}, obj.meta||{}), items: obj.items};
+    bindMeta(); save(); render();
+    toast("Sicherung geladen: " + state.items.length + " Positionen");
+  }catch(err){ toast("Diese Datei ist keine gültige Sicherung"); }
+});
+
+/* ---------- PDF ---------- */
+const ML=15, MR=15, PW=210, PH=297;
+const CW = PW-ML-MR, C_NR=9, C_PHOTO=76, C_TEXT=CW-C_NR-C_PHOTO;
+const ROW_H=56, HW=7, ROWS=4, TABLE_TOP=54, HDR_H=6;
+
+function fitBox(p,x,y,w,h){
+  const s = Math.min(w/p.w, h/p.h);
+  const dw = p.w*s, dh = p.h*s;
+  return [x+(w-dw)/2, y+(h-dh)/2, dw, dh];
+}
+function buildPdf(){
+  const doc = new window.jspdf.jsPDF({unit:"mm", format:"a4", compress:true});
+  const m = state.meta;
+  const pages = Math.max(1, Math.ceil(state.items.length / ROWS));
+  for(let p=0; p<pages; p++){
+    if(p) doc.addPage();
+    doc.setTextColor(19,32,41);
+    doc.setFont("helvetica","bold"); doc.setFontSize(13);
+    doc.text(p ? "Wohnungsabnahme – Mängelliste (Fortsetzung)"
+               : "Wohnungsabnahme – Mängel- und Restarbeitenliste", ML, 20);
+    if(!p){
+      const rows = [
+        [["Objekt / Projekt", m.objekt, .52],["Einheit / Wohnung", m.einheit, .26],["Datum", deFmt(m.datum), .22]],
+        [["Abnahme durch", m.abnahme, .52],["Anwesend / Übergeber", m.anwesend, .48]]
+      ];
+      let y = 28;
+      rows.forEach(row=>{
+        let x = ML;
+        row.forEach(function(c){
+          const w = CW*c[2];
+          doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(120,140,152);
+          doc.text(String(c[0]).toUpperCase(), x, y);
+          doc.setFontSize(9.5); doc.setTextColor(19,32,41);
+          doc.text(doc.splitTextToSize(c[1] || "", w-4)[0] || "", x, y+4.6);
+          doc.setDrawColor(190,200,208); doc.setLineWidth(.2);
+          doc.line(x, y+5.6, x+w-3, y+5.6);
+          x += w;
+        });
+        y += 11;
+      });
+    }
+    doc.setFillColor(236,240,243);
+    doc.rect(ML, TABLE_TOP-HDR_H, CW, HDR_H, "F");
+    doc.setDrawColor(140,155,166); doc.setLineWidth(.2);
+    doc.rect(ML, TABLE_TOP-HDR_H, CW, HDR_H);
+    doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(70,88,100);
+    doc.text("NR.", ML+2.2, TABLE_TOP-1.9);
+    doc.text("MANGEL / RESTARBEIT", ML+C_NR+2.5, TABLE_TOP-1.9);
+    doc.text("FOTO", ML+C_NR+C_TEXT+2.5, TABLE_TOP-1.9);
+
+    for(let r=0; r<ROWS; r++){
+      const n = p*ROWS + r;
+      const y0 = TABLE_TOP + r*ROW_H;
+      const xT = ML+C_NR, xP = xT+C_TEXT;
+      doc.setDrawColor(140,155,166); doc.setLineWidth(.2);
+      doc.rect(ML, y0, CW, ROW_H);
+      doc.line(xT, y0, xT, y0+ROW_H);
+      doc.line(xP, y0, xP, y0+ROW_H);
+      doc.setDrawColor(198,208,214); doc.setLineWidth(.15);
+      doc.line(xT, y0+ROW_H-HW, xP, y0+ROW_H-HW);
+      doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(90,106,118);
+      doc.text(String(n+1), ML+C_NR/2, y0+6, {align:"center"});
+      doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(120,140,152);
+      doc.text("ZUSTÄNDIG", xT+2.5, y0+ROW_H-2.4);
+
+      const it = state.items[n];
+      const px = xP+1.5, py = y0+1.5, pw = C_PHOTO-3, phh = ROW_H-3;
+      if(it){
+        doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(19,32,41);
+        const maxLines = Math.floor((ROW_H-HW-6)/4.1);
+        let lines = doc.splitTextToSize(it.text || "", C_TEXT-6);
+        if(lines.length > maxLines){ lines = lines.slice(0,maxLines); lines[maxLines-1] += " …"; }
+        doc.text(lines, xT+2.5, y0+6, {lineHeightFactor:1.22});
+        if(it.trade){
+          doc.setFontSize(9); doc.setTextColor(19,32,41);
+          doc.text(doc.splitTextToSize(it.trade, C_TEXT-24)[0], xT+19, y0+ROW_H-2.4);
+        }
+        const k = it.photos.length;
+        if(k){
+          const gap = 1.5, cw = (pw - gap*(k-1))/k;
+          it.photos.forEach((ph_, i)=>{
+            const b = fitBox(ph_, px + i*(cw+gap), py, cw, phh);
+            try{ doc.addImage(ph_.data, "JPEG", b[0], b[1], b[2], b[3]); }catch(e){}
+          });
+        }else{
+          doc.setDrawColor(210,218,224); doc.setLineWidth(.15);
+          doc.setLineDashPattern([1,1],0); doc.rect(px,py,pw,phh); doc.setLineDashPattern([],0);
+        }
+      }else{
+        doc.setDrawColor(210,218,224); doc.setLineWidth(.15);
+        doc.setLineDashPattern([1,1],0); doc.rect(px,py,pw,phh); doc.setLineDashPattern([],0);
+      }
+    }
+    doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(130,148,160);
+    doc.text("Seite " + (p+1) + " von " + pages, PW-MR, PH-12, {align:"right"});
+    const foot = [m.objekt, m.einheit].filter(Boolean).join(" · ");
+    if(foot) doc.text(foot, ML, PH-12);
+  }
+  return doc;
+}
+function fileName(){
+  const m = state.meta;
+  const base = [m.objekt, m.einheit].filter(Boolean).join("_") || "Wohnungsabnahme";
+  const d = (m.datum || new Date().toISOString().slice(0,10)).replace(/-/g,"");
+  return (base + "_Maengelliste_" + d).replace(/[^A-Za-z0-9_\-]+/g,"_").replace(/_+/g,"_").slice(0,80) + ".pdf";
+}
+$("pdf").addEventListener("click", ()=>{
+  if(!state.items.length) return;
+  const btn = $("pdf");
+  btn.disabled = true; btn.textContent = "…";
+  try{
+    const doc = buildPdf();
+    const blob = doc.output("blob");
+    const name = fileName();
+    lastPdf = {blob, name};
+    const kb = Math.round(blob.size/1024);
+    $("pdfInfo").textContent = name + " · " + state.items.length + " Positionen · " + (kb > 1024 ? (kb/1024).toFixed(1) + " MB" : kb + " KB");
+    let canShare = false;
+    try{
+      const f = new File([blob], name, {type:"application/pdf"});
+      canShare = !!(navigator.canShare && navigator.canShare({files:[f]}));
+      lastPdf.file = f;
+    }catch(e){}
+    $("pdfShare").hidden = !canShare;
+    $("pdfPanel").hidden = false;
+  }catch(err){
+    toast("PDF konnte nicht erzeugt werden");
+  }finally{
+    btn.disabled = false; btn.textContent = "PDF";
+  }
+});
+$("pdfShare").addEventListener("click", async ()=>{
+  try{ await navigator.share({files:[lastPdf.file], title:lastPdf.name}); }
+  catch(e){ /* abgebrochen */ }
+});
+$("pdfSave").addEventListener("click", ()=> downloadBlob(lastPdf.blob, lastPdf.name));
+$("pdfOpen").addEventListener("click", ()=>{
+  const url = URL.createObjectURL(lastPdf.blob);
+  window.open(url, "_blank");
+  setTimeout(()=> URL.revokeObjectURL(url), 60000);
+});
+$("pdfClose").addEventListener("click", ()=>{ $("pdfPanel").hidden = true; });
+
+/* ---------- Start ---------- */
+(async function init(){
+  const saved = await load();
+  if(saved && Array.isArray(saved.items)) state = saved;
+  else state.meta.datum = new Date().toISOString().slice(0,10);
+  bindMeta(); render();
+
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  let dismissed = false;
+  try{ dismissed = localStorage.getItem("installHintDismissed") === "1"; }catch(e){}
+  if(!standalone && !dismissed){
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    $("installText").textContent = ios
+      ? "Teilen-Symbol antippen → „Zum Home-Bildschirm“. Danach startet die Erfassung wie eine App."
+      : "Browser-Menü → „App installieren“ oder „Zum Startbildschirm“. Danach startet die Erfassung wie eine App.";
+    $("installHint").hidden = false;
+  }
+  $("installDismiss").addEventListener("click", ()=>{
+    $("installHint").hidden = true;
+    try{ localStorage.setItem("installHintDismissed","1"); }catch(e){}
+  });
+
+  if("serviceWorker" in navigator && location.protocol.indexOf("http") === 0){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>

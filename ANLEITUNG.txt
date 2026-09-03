@@ -1,0 +1,85 @@
+ABNAHME VOR ORT — Installation und Betrieb
+==========================================
+
+WAS DAS IST
+Eine kleine Web-App zum Erfassen von Mängeln und Restarbeiten bei
+Wohnungsabnahmen: Text, zuständiger Handwerker, bis zu drei Fotos pro
+Position. Auf Knopfdruck erzeugt sie daraus ein PDF im festen
+2-Spalten-Layout (4 Positionen pro A4-Seite).
+
+Sie läuft im Browser auf iPhone, iPad, Android und PC. Kein Konto, keine
+Installation aus einem Store, keine Verbindung zu Dritten. Nach dem ersten
+Aufruf funktioniert sie auch ohne Internet.
+
+
+1) HOCHLADEN
+Alle Dateien aus diesem Ordner per FTP in ein Verzeichnis auf Ihrem
+Webspace legen, zum Beispiel:
+
+    father-son.it/abnahme/
+
+Die Dateien müssen zusammen im gleichen Verzeichnis liegen:
+
+    index.html              die App
+    jspdf.umd.min.js        erzeugt das PDF im Gerät
+    sw.js                   macht die App offline-fähig
+    manifest.webmanifest    Name und Symbol für den Homescreen
+    icon-192.png            Symbol
+    icon-512.png            Symbol
+
+Wichtig: Die Adresse muss mit https:// aufrufbar sein. Nur dann
+funktionieren Offline-Betrieb und Homescreen-Symbol. Bei http:// läuft die
+App zwar, aber nur mit Internetverbindung.
+
+
+2) AUF DAS HANDY BRINGEN
+Adresse im Browser des Geräts öffnen (z. B. https://father-son.it/abnahme/),
+dann:
+
+    iPhone / iPad:  Teilen-Symbol  ->  "Zum Home-Bildschirm"
+    Android:        Menü (drei Punkte)  ->  "App installieren"
+    PC:             Lesezeichen genügt, oder in Chrome/Edge installieren
+
+Danach startet die Erfassung wie eine App, ohne Browserleiste.
+
+
+3) ARBEITEN
+Kopfdaten (Objekt, Einheit, Datum) einmal oben eintragen.
+Dann pro Mangel:
+
+    "+ Mangel erfassen"
+    Raum antippen              wird dem Text vorangestellt
+    Text tippen                Bausteine antippen geht schneller
+    Handwerker antippen        oder Firma eintippen
+    Kamera / Galerie           bis zu 3 Fotos
+    "Speichern & nächste"
+
+Am Ende "PDF": Teilen, Herunterladen oder Öffnen. Auf dem iPhone ist
+"Teilen" der bequemste Weg — von dort in Dateien, Mail oder WhatsApp.
+
+
+4) WO DIE DATEN LIEGEN
+Ausschließlich im Browser des jeweiligen Geräts, nicht auf dem Server und
+nicht bei uns. Das heißt:
+
+  - Die Erfassung funktioniert ohne Netz, auch im Keller.
+  - Die Daten sind nur auf diesem einen Gerät sichtbar.
+  - Erzeugen Sie das PDF am Ende der Abnahme, nicht Tage später.
+    Wer den Browser-Speicher löscht, löscht auch die Erfassung.
+
+"Sicherung speichern" legt eine JSON-Datei mit allen Positionen und Fotos
+ab; "Sicherung laden" holt sie zurück — auch auf einem anderen Gerät.
+
+
+5) NEUE ABNAHME
+"Neue Abnahme beginnen" leert die Liste. Vorher PDF erzeugen und, wenn
+gewünscht, Sicherung speichern.
+
+
+6) ÄNDERUNGEN
+Wird eine Datei ersetzt, in sw.js die Zeile
+
+    const CACHE = "abnahme-v1";
+
+auf v2, v3 usw. hochzählen. Sonst zeigen bereits installierte Geräte
+weiterhin die alte Version aus ihrem Offline-Speicher.
