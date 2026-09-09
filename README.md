@@ -1,4 +1,3 @@
-[ANLEITUNG.txt](https://github.com/user-attachments/files/31995528/ANLEITUNG.txt)
 ABNAHME VOR ORT — Installation und Betrieb
 ==========================================
 
