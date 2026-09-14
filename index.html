@@ -94,7 +94,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible{outline:2px so
 .btn[disabled]{opacity:.5; cursor:default}
 .tools{display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; align-items:center}
 
-#sheet{position:fixed; inset:0; z-index:50; background:var(--ground); display:flex; flex-direction:column}
+#sheet, #itPanel{position:fixed; inset:0; z-index:50; background:var(--ground); display:flex; flex-direction:column}
 .sheet-head{display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); background:var(--surface)}
 .sheet-head h2{margin:0; font-size:16px; font-weight:700}
 .sheet-head .x{margin-left:auto; border:1px solid var(--line); background:var(--surface); color:var(--ink-2); border-radius:8px; width:38px; height:38px; font-size:17px; cursor:pointer}
@@ -238,6 +238,7 @@ select{font:15.5px var(--ui); color:var(--ink); background:var(--surface); borde
     </div>
 
     <div class="tools">
+      <button class="btn quiet" id="itProt" type="button">Italienische Texte</button>
       <button class="btn quiet" id="dupProt" type="button">Als Vorlage kopieren</button>
       <button class="btn quiet" id="delProt" type="button">Abnahme löschen</button>
       <span id="confirmDel" hidden style="display:flex; gap:8px; align-items:center; font-size:13.5px; color:var(--ink-2)">
@@ -277,6 +278,10 @@ select{font:15.5px var(--ui); color:var(--ink); background:var(--surface); borde
         <p class="hint" id="dictHint">Diktieren geht immer auch über das Mikrofon auf der Tastatur – dort sogar ohne Netz.</p>
       </div>
       <div class="chips row" style="margin-top:8px" id="phraseChips"></div>
+      <label class="field" style="margin-top:12px">
+        <span class="lbl">Italienisch – optional, sonst automatisch</span>
+        <textarea id="descIt" rows="2" placeholder="wird bei Bausteinen automatisch ergänzt"></textarea>
+      </label>
     </div>
     <div class="block">
       <span class="lbl">Zuständiger Handwerker</span>
@@ -305,6 +310,34 @@ select{font:15.5px var(--ui); color:var(--ink); background:var(--surface); borde
   </div>
 </div>
 
+<div id="itPanel" hidden>
+  <div class="sheet-head">
+    <h2>Italienische Texte</h2>
+    <button class="x" id="itClose" type="button" aria-label="Schließen">✕</button>
+  </div>
+  <div class="sheet-scroll">
+    <p class="hint" id="itStatus" style="margin:0 0 12px"></p>
+
+    <div class="block">
+      <span class="lbl">Schritt 1 – Liste kopieren</span>
+      <textarea id="itOut" rows="7" readonly></textarea>
+      <div class="photo-btns">
+        <button class="btn ghost" id="itCopy" type="button">In die Zwischenablage</button>
+      </div>
+      <p class="hint">Text in einen Claude-Chat einfügen. Die Anweisung steht schon oben drin.</p>
+    </div>
+
+    <div class="block">
+      <span class="lbl">Schritt 2 – Antwort hier einfügen</span>
+      <textarea id="itIn" rows="7" placeholder="Antwort einfügen: 1 | Terrazza – ..."></textarea>
+      <div class="photo-btns">
+        <button class="btn primary" id="itApply" type="button">Übernehmen</button>
+      </div>
+      <p class="hint">Erkannt werden Zeilen der Form „Nummer | Text“. Alles andere wird ignoriert.</p>
+    </div>
+  </div>
+</div>
+
 <div id="pdfPanel" hidden>
   <div class="card">
     <div id="pdfOptions">
@@ -319,6 +352,7 @@ select{font:15.5px var(--ui); color:var(--ink); background:var(--surface); borde
         <input type="checkbox" id="pdfOpenOnly">
         <span>Nur offene Positionen – erledigte weglassen</span>
       </label>
+      <p class="hint" id="pdfItHint" style="margin-top:10px" hidden></p>
       <div class="row" style="margin-top:16px">
         <button class="btn primary" id="pdfGo" type="button">PDF erzeugen</button>
         <button class="btn quiet" id="pdfCancel" type="button">Abbrechen</button>
@@ -729,7 +763,46 @@ const TRADES = ["Bauleitung","Baumeister","Hydrauliker","Elektriker","Lichtinsta
   "Abdichtung","Glaser","Ofenbauer","Tischler","Schwimmbad","Gärtner","Reinigung"];
 const PAD_TO = 30;          // Leerzeilen im Gesamtprotokoll bis zu dieser Positionsnummer
 const DIKTAT_SPRACHE = "de-DE";
-const APP_VERSION = "13";    // bei jeder Freigabe hochzählen, gleiche Zahl in sw.js
+const APP_VERSION = "14";    // bei jeder Freigabe hochzählen, gleiche Zahl in sw.js
+
+/* Italienisch fuer die festen Bestandteile. Nur hier pflegen. */
+const IT_ROOMS = {
+  "Allgemein":"Generale", "Vorraum":"Anticamera", "Eingang":"Ingresso", "Gang":"Corridoio",
+  "Schlafzimmer":"Camera da letto", "Kinderzimmer 1":"Camera bambini 1",
+  "Kinderzimmer 2":"Camera bambini 2", "Arbeitszimmer":"Studio", "Bad":"Bagno", "WC":"WC",
+  "Wohnzimmer":"Soggiorno", "Terrasse":"Terrazza", "Küche":"Cucina", "Speis":"Dispensa",
+  "Abstellkammer":"Ripostiglio", "Technikraum":"Locale tecnico", "Keller":"Cantina",
+  "Garage":"Garage", "Stellplatz":"Posto auto", "Fahrradraum":"Locale biciclette",
+  "Müllraum":"Locale rifiuti", "Treppenhaus":"Vano scale", "Garten":"Giardino",
+  "Zufahrt":"Accesso"
+};
+const IT_TRADES = {
+  "Bauleitung":"Direzione lavori", "Baumeister":"Impresa edile", "Hydrauliker":"Idraulico",
+  "Elektriker":"Elettricista", "Lichtinstallateur":"Installatore luci", "Maler":"Imbianchino",
+  "Trockenbau":"Cartongesso", "Fliesenleger":"Piastrellista", "Bodenleger":"Posatore pavimenti",
+  "Fenster":"Finestre", "Türen":"Porte", "Schlosser":"Fabbro", "Spengler":"Lattoniere",
+  "Zimmermann":"Carpentiere", "Abdichtung":"Impermeabilizzazione", "Glaser":"Vetraio",
+  "Ofenbauer":"Stufaio", "Tischler":"Falegname", "Schwimmbad":"Piscina", "Gärtner":"Giardiniere",
+  "Reinigung":"Pulizie"
+};
+const IT_PHRASES = {
+  "Silikonfuge nachziehen":"rifare il giunto in silicone",
+  "Farbe nachbessern":"ritoccare la vernice",
+  "Kratzer":"graffio",
+  "Delle":"ammaccatura",
+  "Fliese gesprungen":"piastrella crepata",
+  "Fuge fehlt":"manca il giunto",
+  "Tür schleift":"la porta striscia",
+  "Beschlag einstellen":"regolare la ferramenta",
+  "Sockelleiste fehlt":"manca il battiscopa",
+  "Steckdose fehlt":"manca la presa",
+  "Lampe anschließen":"collegare la lampada",
+  "Heizkörper lose":"radiatore allentato",
+  "Rollladen klemmt":"la tapparella si blocca",
+  "Abfluss undicht":"lo scarico perde",
+  "Anschlussfuge offen":"giunto di raccordo aperto",
+  "Reinigung erforderlich":"necessaria la pulizia"
+};
 
 /* Logo: Data-URI einsetzen, z. B. "data:image/png;base64,iVBORw0K..."
    Leer lassen = Platz bleibt frei. Gross auf der ersten Seite, klein in der Kopfzeile danach. */
@@ -821,13 +894,45 @@ function norm(t){
     .replace(/[^a-z0-9]/g,"");
 }
 
+/* ---------- Italienisch ---------- */
+function itTrade(t){
+  const v = IT_TRADES[(t || "").trim()];
+  return v || "";
+}
+/* Uebersetzt nur, was aus Raum- und Baustein-Schaltflächen zusammengesetzt ist.
+   Freitext bleibt leer - der wird über das Feld oder das Übersetzungsfenster ergänzt. */
+function autoIt(text){
+  let rest = (text || "").trim();
+  if(!rest) return "";
+  let raumIt = "";
+  const m = rest.match(/^([^–\n]{1,24})\s*–\s*([\s\S]*)$/);
+  if(m && IT_ROOMS[m[1].trim()]){
+    raumIt = IT_ROOMS[m[1].trim()];
+    rest = m[2].trim();
+  }
+  if(!rest) return raumIt;
+  const teile = rest.split(/\s*,\s*/).filter(Boolean);
+  const uebersetzt = [];
+  for(const teil of teile){
+    const key = Object.keys(IT_PHRASES).find(k => norm(k) === norm(teil));
+    if(!key) return "";                      // Freitext dabei: lieber nichts als halb
+    uebersetzt.push(IT_PHRASES[key]);
+  }
+  const satz = uebersetzt.join(", ");
+  return raumIt ? (raumIt + " – " + satz) : satz;
+}
+function fehlendeIt(){
+  return state ? state.items.filter(i=> (i.text || "").trim() && !(i.textIt || "").trim()).length : 0;
+}
+
 /* ---------- Protokolle ---------- */
 function leeresProtokoll(){
   return {id: uid(), meta:{objekt:"",einheit:"",datum:heute(),abnahme:"",anwesend:""},
           items:[], created: Date.now(), updated: Date.now()};
 }
 function normItem(it){
-  return {text: it.text || "", trade: it.trade || "", photos: it.photos || [], done: !!it.done};
+  return {text: it.text || "", textIt: it.textIt || "", trade: it.trade || "",
+          photos: it.photos || [], done: !!it.done};
 }
 function summary(p){
   return {id: p.id, objekt: p.meta.objekt || "", einheit: p.meta.einheit || "",
@@ -980,7 +1085,8 @@ async function duplizieren(id){
     id: uid(),
     meta: {objekt: p.meta.objekt || "", einheit: "", datum: heute(),
            abnahme: p.meta.abnahme || "", anwesend: ""},
-    items: p.items.map(i=> ({text: i.text, trade: i.trade, photos: [], done: false})),
+    items: p.items.map(i=> ({text: i.text, textIt: i.textIt || "", trade: i.trade,
+                             photos: [], done: false})),
     created: Date.now(), updated: Date.now()
   };
   await idbPut(ST_PROT, kopie, kopie.id);
@@ -1004,6 +1110,64 @@ $("confirmDelYes").addEventListener("click", async ()=>{
   $("confirmDel").hidden = true; $("delProt").hidden = false;
   showHome();
   toast("Abnahme gelöscht");
+});
+
+/* ---------- Italienische Texte nachtragen ---------- */
+function itListe(){
+  const zeilen = [];
+  state.items.forEach((it, i)=>{
+    if((it.text || "").trim() && !(it.textIt || "").trim()){
+      zeilen.push((i+1) + " | " + it.text.replace(/\s+/g, " "));
+    }
+  });
+  return zeilen;
+}
+function itOeffnen(){
+  const zeilen = itListe();
+  const gesamt = state.items.filter(i=> (i.text||"").trim()).length;
+  $("itStatus").textContent = zeilen.length
+    ? (zeilen.length + " von " + gesamt + " Positionen haben noch keinen italienischen Text.")
+    : "Alle Positionen haben einen italienischen Text.";
+  $("itOut").value = zeilen.length
+    ? ("Übersetze die folgenden Baumängel ins Italienische. Antworte ausschließlich mit " +
+       "Zeilen im Format „Nummer | italienischer Text“, ohne weitere Erklärung. " +
+       "Fachsprache aus dem Südtiroler Bauwesen verwenden.\n\n" + zeilen.join("\n"))
+    : "";
+  $("itIn").value = "";
+  $("itPanel").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+$("itProt").addEventListener("click", ()=> state && itOeffnen());
+$("itClose").addEventListener("click", ()=>{
+  $("itPanel").hidden = true;
+  document.body.style.overflow = "";
+});
+$("itCopy").addEventListener("click", async ()=>{
+  const t = $("itOut").value;
+  if(!t){ toast("Nichts zu übersetzen"); return; }
+  try{
+    await navigator.clipboard.writeText(t);
+    toast("Liste kopiert");
+  }catch(e){
+    $("itOut").focus(); $("itOut").select();
+    toast("Kopieren nicht erlaubt – Text ist markiert, bitte selbst kopieren", 4000);
+  }
+});
+$("itApply").addEventListener("click", ()=>{
+  const zeilen = $("itIn").value.split(/\n+/);
+  let treffer = 0;
+  zeilen.forEach(z=>{
+    const m = z.match(/^\s*(\d+)\s*[|)\].:-]\s*(.+?)\s*$/);
+    if(!m) return;
+    const nr = parseInt(m[1], 10) - 1;
+    if(nr < 0 || nr >= state.items.length) return;
+    state.items[nr].textIt = m[2];
+    treffer++;
+  });
+  if(!treffer){ toast("Keine Zeilen im Format „Nummer | Text“ gefunden", 4000); return; }
+  save(); render();
+  itOeffnen();
+  toast(treffer + (treffer === 1 ? " Text übernommen" : " Texte übernommen"));
 });
 
 /* ---------- Sicherung ---------- */
@@ -1233,8 +1397,9 @@ function filterTrades(){
 }
 function openSheet(idx){
   editing = idx;
-  const src = idx === null ? {text:"", trade:"", photos:[]} : state.items[idx];
+  const src = idx === null ? {text:"", textIt:"", trade:"", photos:[]} : state.items[idx];
   draft = {text: src.text, trade: src.trade, photos: src.photos.slice()};
+  $("descIt").value = src.textIt || "";
   $("sheetTitle").textContent = "Position " + ((idx === null ? state.items.length : idx) + 1);
   $("desc").value = draft.text;
   $("tradeFree").value = TRADES.indexOf(draft.trade) === -1 ? draft.trade : "";
@@ -1259,11 +1424,14 @@ function commit(){
     draft.trade = known || free;
   }
   if(!draft.text && !draft.photos.length) return false;
+  const itText = $("descIt").value.trim() || autoIt(draft.text);
   if(editing === null){
-    state.items.push({text: draft.text, trade: draft.trade, photos: draft.photos, done: false});
+    state.items.push({text: draft.text, textIt: itText, trade: draft.trade,
+                      photos: draft.photos, done: false});
   }else{
     const alt = state.items[editing];
-    state.items[editing] = {text: draft.text, trade: draft.trade, photos: draft.photos, done: alt.done};
+    state.items[editing] = {text: draft.text, textIt: itText, trade: draft.trade,
+                            photos: draft.photos, done: alt.done};
   }
   save(); render();
   return true;
@@ -1475,7 +1643,7 @@ function buildPdf(opts){
     drawLogo(doc, pg.first ? LOGO_FIRST : LOGO_CONT);
     doc.setFont("helvetica","bold"); doc.setFontSize(pg.first ? 13 : 11);
     let title = sec.label ? (T_LISTE + " – " + sec.label) : T_TITEL;
-    let titleIt = sec.label ? (T_LISTE_IT + " – " + sec.label) : T_TITEL_IT;
+    let titleIt = sec.label ? (T_LISTE_IT + " – " + (itTrade(sec.label) || sec.label)) : T_TITEL_IT;
     if(!pg.first){ title += " (" + T_FORTS + ")"; }
     doc.text(title, ML, pg.first ? 21 : 17);
     doc.setFont("helvetica","normal"); doc.setFontSize(pg.first ? 9 : 8);
@@ -1534,14 +1702,25 @@ function buildPdf(opts){
       const px = xP+1.5, py = y0+1.5, pw = C_PHOTO-3, phh = ROW_H-3;
       if(entry){
         const it = entry.it;
+        const platz = Math.floor((ROW_H-HW-6)/4.1);            // Zeilen gesamt je Feld
         doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(19,32,41);
-        const maxLines = Math.floor((ROW_H-HW-6)/4.1);
         let lines = doc.splitTextToSize(it.text || "", C_TEXT-6);
-        if(lines.length > maxLines){ lines = lines.slice(0,maxLines); lines[maxLines-1] += " …"; }
+        const itTxt = (it.textIt || "").trim();
+        const maxDe = itTxt ? Math.max(2, platz - 3) : platz;
+        if(lines.length > maxDe){ lines = lines.slice(0,maxDe); lines[maxDe-1] += " …"; }
         doc.text(lines, xT+2.5, y0+6, {lineHeightFactor:1.22});
+        if(itTxt){
+          doc.setFont("helvetica","italic"); doc.setFontSize(8.8); doc.setTextColor(96,116,128);
+          let zi = doc.splitTextToSize(itTxt, C_TEXT-6);
+          const restZeilen = platz - lines.length;
+          if(zi.length > restZeilen){ zi = zi.slice(0,restZeilen); zi[restZeilen-1] += " …"; }
+          doc.text(zi, xT+2.5, y0+6 + lines.length*4.1 + 1.2, {lineHeightFactor:1.22});
+          doc.setFont("helvetica","normal"); doc.setTextColor(19,32,41);
+        }
         if(it.trade){
           doc.setFontSize(9); doc.setTextColor(19,32,41);
-          doc.text(doc.splitTextToSize(it.trade, C_TEXT-48)[0], xT+43, y0+ROW_H-2.4);
+          const gew = itTrade(it.trade) ? (it.trade + " / " + itTrade(it.trade)) : it.trade;
+          doc.text(doc.splitTextToSize(gew, C_TEXT-48)[0], xT+43, y0+ROW_H-2.4);
         }
         if(it.done){
           doc.setFont("helvetica","bold"); doc.setFontSize(6.5); doc.setTextColor(44,110,73);
@@ -1642,6 +1821,11 @@ $("pdf").addEventListener("click", ()=>{
     o.textContent = t[0] + " – " + t[1] + (t[1] === 1 ? " Position" : " Positionen");
     sel.appendChild(o);
   });
+  const offen = fehlendeIt();
+  $("pdfItHint").hidden = offen === 0;
+  if(offen) $("pdfItHint").textContent =
+    offen + (offen === 1 ? " Position hat" : " Positionen haben") +
+    " keinen italienischen Text – diese erscheinen nur auf Deutsch. Nachtragen über „Italienische Texte“.";
   refreshPdfOptions();
   $("pdfOptions").hidden = false;
   $("pdfResult").hidden = true;

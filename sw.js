@@ -3,7 +3,7 @@
    Rueckfall aus dem Cache bedient. Neue Versionen erscheinen damit beim naechsten
    Start, ohne dass jemand Cache leeren oder einen neuen Link oeffnen muss.
    Bei Aenderungen an den Dateien die Version hochzaehlen. */
-const CACHE = "abnahme-v13";
+const CACHE = "abnahme-v14";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
